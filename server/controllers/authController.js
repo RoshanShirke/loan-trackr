@@ -20,10 +20,13 @@ export async function signup(req, res) {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    const usersCountResult = dbGet('SELECT COUNT(*) as count FROM users');
+    const isAdmin = usersCountResult.count === 0 ? 1 : 0;
+
     const result = dbRun(
-      `INSERT INTO users (first_name, last_name, mobile, email, user_id, password_hash, is_verified)
-       VALUES (?, ?, ?, ?, ?, ?, 0)`,
-      [firstName, lastName, mobile, email, userId, passwordHash]
+      `INSERT INTO users (first_name, last_name, mobile, email, user_id, password_hash, is_verified, is_admin)
+       VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
+      [firstName, lastName, mobile, email, userId, passwordHash, isAdmin]
     );
 
     const otp = generateOTP();
@@ -54,7 +57,7 @@ export async function login(req, res) {
     const rememberMe = req.body.rememberMe || false;
 
     const user = dbGet(
-      'SELECT id, user_id, first_name, last_name, email, password_hash, is_verified, preferred_currency FROM users WHERE user_id = ?',
+      'SELECT id, user_id, first_name, last_name, email, password_hash, is_verified, preferred_currency, is_admin FROM users WHERE user_id = ?',
       [userId]
     );
 
@@ -92,6 +95,7 @@ export async function login(req, res) {
         lastName: user.last_name,
         email: user.email,
         preferredCurrency: user.preferred_currency,
+        isAdmin: !!user.is_admin,
       },
     });
   } catch (error) {
@@ -120,7 +124,7 @@ export async function verifyOTP(req, res) {
     dbRun("UPDATE users SET is_verified = 1, updated_at = datetime('now') WHERE email = ?", [email]);
 
     const user = dbGet(
-      'SELECT id, user_id, first_name, last_name, email, preferred_currency FROM users WHERE email = ?',
+      'SELECT id, user_id, first_name, last_name, email, preferred_currency, is_admin FROM users WHERE email = ?',
       [email]
     );
 
@@ -136,6 +140,7 @@ export async function verifyOTP(req, res) {
         lastName: user.last_name,
         email: user.email,
         preferredCurrency: user.preferred_currency,
+        isAdmin: !!user.is_admin,
       },
     });
   } catch (error) {

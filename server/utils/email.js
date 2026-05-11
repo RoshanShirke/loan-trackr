@@ -1,11 +1,15 @@
-import sgMail from '@sendgrid/mail';
+import nodemailer from 'nodemailer';
 
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@loantrackr.app';
+const FROM_EMAIL = process.env.EMAIL_USER || 'noreply@loantrackr.app';
 
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
-}
+// Create a transporter object using standard SMTP transport
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_APP_PASSWORD,
+  },
+});
 
 export async function sendOTPEmail(toEmail, otp, purpose = 'signup') {
   const subjects = {
@@ -34,24 +38,24 @@ export async function sendOTPEmail(toEmail, otp, purpose = 'signup') {
     </div>
   `;
 
-  if (SENDGRID_API_KEY) {
+  if (process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
     try {
-      await sgMail.send({
+      await transporter.sendMail({
+        from: `"LoanTrackr" <${FROM_EMAIL}>`,
         to: toEmail,
-        from: FROM_EMAIL,
         subject: subjects[purpose] || subjects.signup,
         html: htmlContent,
       });
       console.log('📧 OTP email sent to', toEmail);
       return true;
     } catch (error) {
-      console.error('❌ SendGrid error:', error.message);
+      console.error('❌ Nodemailer error:', error.message);
       console.log('📧 [FALLBACK] OTP for ' + toEmail + ': ' + otp);
       return true;
     }
   } else {
     console.log('\n' + '='.repeat(50));
-    console.log('📧 OTP EMAIL (Dev Mode)');
+    console.log('📧 OTP EMAIL (Dev Mode - Nodemailer not configured)');
     console.log('   To: ' + toEmail);
     console.log('   OTP: ' + otp);
     console.log('   Expires: 10 minutes');

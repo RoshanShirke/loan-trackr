@@ -52,10 +52,18 @@ export async function initializeDatabase() {
       password_hash TEXT NOT NULL,
       preferred_currency TEXT DEFAULT 'INR',
       is_verified INTEGER DEFAULT 0,
+      is_admin INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     )
   `);
+
+  try {
+    db.run('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0');
+  } catch (err) {
+    // Column might already exist, ignore error
+  }
+
 
   db.run(`
     CREATE TABLE IF NOT EXISTS loans (

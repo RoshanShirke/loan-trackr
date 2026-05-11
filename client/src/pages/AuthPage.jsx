@@ -70,10 +70,10 @@ export default function AuthPage() {
 }
 
 function LoginForm({ onSwitch, onLogin, onNeedVerification }) {
-  const [userId, setUserId] = useState('');
+  const [userId, setUserId] = useState(() => localStorage.getItem('savedUserId') || '');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('savedUserId'));
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
@@ -81,6 +81,11 @@ function LoginForm({ onSwitch, onLogin, onNeedVerification }) {
     setLoading(true);
     try {
       const data = await authService.login({ userId, password, rememberMe });
+      if (rememberMe) {
+        localStorage.setItem('savedUserId', userId);
+      } else {
+        localStorage.removeItem('savedUserId');
+      }
       toast.success('Welcome back!');
       onLogin(data.token, data.user);
     } catch (err) {

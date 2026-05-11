@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { loanService, analyticsService } from '../services/services';
 import { formatCurrency, formatDate, daysUntil, getAppColor } from '../utils/formatters';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { LogOut, Plus, Wallet, CircleDollarSign, Calendar, Edit3, Trash2, CheckCircle2, CreditCard, X, Award, Sparkles, BarChart3, PieChart as PieIcon, TrendingUp } from 'lucide-react';
+import { LogOut, Plus, Wallet, CircleDollarSign, Calendar, Edit3, Trash2, CheckCircle2, CreditCard, X, Award, Sparkles, BarChart3, PieChart as PieIcon, TrendingUp, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './Dashboard.css';
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [loans, setLoans] = useState([]);
   const [summary, setSummary] = useState(null);
   const [comparison, setComparison] = useState(null);
@@ -57,6 +59,11 @@ export default function DashboardPage() {
           <div className="nav-brand"><Sparkles size={24}/><span className="brand-text">Loan<strong>Trackr</strong></span></div>
           <div className="nav-user">
             <span className="nav-greeting">Hello, <strong>{user?.firstName}</strong></span>
+            {user?.isAdmin && (
+              <button className="btn btn-ghost" onClick={() => navigate('/admin')}>
+                <Shield size={16} /> Admin
+              </button>
+            )}
             <button className="btn btn-ghost" onClick={logout} id="logout-btn"><LogOut size={16}/> Logout</button>
           </div>
         </div>
