@@ -1,28 +1,8 @@
-import nodemailer from 'nodemailer';
+// Uses Resend HTTP API (not SMTP) — works on Render free tier
+// Fallback: logs OTP to server console if email fails
 
-const FROM_EMAIL = process.env.EMAIL_USER || 'noreply@loantrackr.app';
-
-// Create transporter with explicit SMTP config and timeouts
-function createTransporter() {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
-    return null;
-  }
-
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_APP_PASSWORD,
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-  });
-}
-
-const transporter = createTransporter();
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const FROM_EMAIL = process.env.EMAIL_FROM || 'LoanTrackr <onboarding@resend.dev>';
 
 export async function sendOTPEmail(toEmail, otp, purpose = 'signup') {
   const subjects = {
@@ -51,19 +31,32 @@ export async function sendOTPEmail(toEmail, otp, purpose = 'signup') {
     </div>
   `;
 
-  if (transporter) {
+  if (RESEND_API_KEY) {
     try {
-      await transporter.sendMail({
-        from: `"LoanTrackr" <${FROM_EMAIL}>`,
-        to: toEmail,
-        subject: subjects[purpose] || subjects.signup,
-        html: htmlContent,
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: FROM_EMAIL,
+          to: [toEmail],
+          subject: subjects[purpose] || subjects.signup,
+          html: htmlContent,
+        }),
       });
-      console.log('📧 OTP email sent to', toEmail);
-      return true;
+
+      const result = await response.json();
+
+      if (response.ok) {
+        console.log('📧 OTP email sent to', toEmail, '(Resend ID:', result.id + ')');
+        return true;
+      } else {
+        throw new Error(result.message || 'Resend API error');
+      }
     } catch (error) {
-      console.error('❌ Nodemailer error:', error.message);
-      // Still log the OTP so user is not locked out
+      console.error('❌ Resend error:', error.message);
       console.log('\n' + '='.repeat(50));
       console.log('📧 OTP FALLBACK (Email failed)');
       console.log('   To: ' + toEmail);
@@ -74,7 +67,7 @@ export async function sendOTPEmail(toEmail, otp, purpose = 'signup') {
     }
   } else {
     console.log('\n' + '='.repeat(50));
-    console.log('📧 OTP EMAIL (Dev Mode - Nodemailer not configured)');
+    console.log('📧 OTP (Dev Mode - No RESEND_API_KEY set)');
     console.log('   To: ' + toEmail);
     console.log('   OTP: ' + otp);
     console.log('   Expires: 10 minutes');
