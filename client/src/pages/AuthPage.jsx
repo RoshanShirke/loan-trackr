@@ -364,7 +364,7 @@ function OTPForm({ email, onSuccess, onBack }) {
     <div className="auth-form otp-form">
       <h2>Verify Email</h2>
       <p className="auth-subtitle">Enter the 6-digit code sent to <strong>{email}</strong></p>
-      <p className="otp-hint">💡 Check server console for OTP in dev mode</p>
+      <p className="otp-hint">📧 Please check your inbox and spam folder</p>
 
       <div className="otp-inputs" onPaste={handlePaste}>
         {otp.map((digit, i) => (
