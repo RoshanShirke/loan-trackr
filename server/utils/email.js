@@ -2,14 +2,27 @@ import nodemailer from 'nodemailer';
 
 const FROM_EMAIL = process.env.EMAIL_USER || 'noreply@loantrackr.app';
 
-// Create a transporter object using standard SMTP transport
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD,
-  },
-});
+// Create transporter with explicit SMTP config and timeouts
+function createTransporter() {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_APP_PASSWORD,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+  });
+}
+
+const transporter = createTransporter();
 
 export async function sendOTPEmail(toEmail, otp, purpose = 'signup') {
   const subjects = {
@@ -38,7 +51,7 @@ export async function sendOTPEmail(toEmail, otp, purpose = 'signup') {
     </div>
   `;
 
-  if (process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
+  if (transporter) {
     try {
       await transporter.sendMail({
         from: `"LoanTrackr" <${FROM_EMAIL}>`,
@@ -50,7 +63,13 @@ export async function sendOTPEmail(toEmail, otp, purpose = 'signup') {
       return true;
     } catch (error) {
       console.error('❌ Nodemailer error:', error.message);
-      console.log('📧 [FALLBACK] OTP for ' + toEmail + ': ' + otp);
+      // Still log the OTP so user is not locked out
+      console.log('\n' + '='.repeat(50));
+      console.log('📧 OTP FALLBACK (Email failed)');
+      console.log('   To: ' + toEmail);
+      console.log('   OTP: ' + otp);
+      console.log('   Error: ' + error.message);
+      console.log('='.repeat(50) + '\n');
       return true;
     }
   } else {
